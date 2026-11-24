@@ -1,0 +1,13 @@
+{
+  "name": "arrowline-stappenchallenge",
+  "private": true,
+  "type": "module",
+  "description": "Arrowline Stappenchallenge januari 2027: PWA (public/) en Supabase-backend (supabase/).",
+  "scripts": {
+    "test": "node tools/test_sql.mjs && node --experimental-strip-types tools/test_validate.mts && node --experimental-strip-types tools/test_review.mts && node --experimental-strip-types tools/test_forensics.mts",
+    "kalibreer": "node --experimental-strip-types tools/kalibratie/kalibreer.mts",
+    "testset": "node --experimental-strip-types tools/kalibratie/maak-testset.mts"
+  },
+  "devDependencies": { "@electric-sql/pglite": "0.5.16" },
+  "engines": { "node": ">=22.6" }
+}
