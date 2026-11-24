@@ -1,0 +1,50 @@
+{
+  "name": "Arrowline Stappenchallenge januari 2027",
+  "short_name": "Arrowline Stappen",
+  "description": "Loop slim, loop samen, loop voor jullie goede doel.",
+  "start_url": "./index.html#dashboard",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#FFF4ED",
+  "theme_color": "#FFF4ED",
+  "lang": "nl",
+  "categories": [
+    "health",
+    "lifestyle"
+  ],
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Stappen doorgeven",
+      "url": "./index.html#stappen"
+    },
+    {
+      "name": "Ranglijst",
+      "url": "./index.html#leaderboard"
+    },
+    {
+      "name": "Kaart",
+      "url": "./index.html#map"
+    }
+  ]
+}
