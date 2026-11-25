@@ -22,7 +22,7 @@
 ### 3. Supabase
 1. Maak een project in regio **Frankfurt (eu-central-1)**.
 2. Installeer de Supabase CLI en koppel: `supabase link --project-ref <ref>`.
-3. Database: `supabase db push` (draait `0001` t/m `0005`).
+3. Database: `supabase db push` (draait de vijf bestanden in `supabase/migrations/`).
 4. Geheimen voor de screenshot-controle: `supabase secrets set ANTHROPIC_API_KEY=... DOUBLE_READ=1 SAMPLE_RATE=0.2 MIN_CONFIDENCE=0.9`.
 5. Functie uitrollen: `supabase functions deploy screenshot-review` (`ingest-steps` is niet nodig: er wordt niet gekoppeld).
 6. *Authentication → URL Configuration*: Site URL `https://stappenmet.arrowline.nl`, en voeg ook het `vercel.app`-adres toe als redirect-URL.
