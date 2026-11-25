@@ -66,4 +66,19 @@ for(const total of [60,300]){
   await as(uuid(903)); const mw=(await db.query("select * from my_warnings()")).rows; ck("deelnemer ziet zijn eigen waarschuwing (1×, dag 16)", mw.length===1&&mw[0].nth===1&&String(mw[0].day).includes("2027")||mw.length===1, JSON.stringify(mw.map(x=>x.nth)));
   await as(uuid(904)); ck("een ander ziet die waarschuwing niet", (await db.query("select * from my_warnings()")).rows.length===0); await as(ADM);
   const st=(await db.query("select * from public_team_day_status('2027-01-18') order by team_id")).rows; ck("teamstatus: alleen aantallen", JSON.stringify(st)===JSON.stringify([{team_id:1,members:2,qualified:0,pending:1,missing:0},{team_id:2,members:1,qualified:0,pending:0,missing:1}]), JSON.stringify(st)); }
+// 5) aanmelden: alleen jezelf, alleen vóór de start
+{ const db=new PGlite(); await db.exec("create schema auth; create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('test.uid', true), '')::uuid $$; create role authenticated;");
+  for(const f of ["20261123000001_schema.sql","20261123000002_rls.sql","20261123000005_admin.sql","20261123000006_signup.sql"]) await db.exec(fs.readFileSync("supabase/migrations/"+f,"utf8"));
+  await db.exec("update challenge set start_date = (now() at time zone 'Europe/Amsterdam')::date + 10; insert into teams(id,name,charity) values (1,'Team 1','Doel A'),(2,'Team 2','Doel B');");
+  const as=async(uid)=>db.exec(`select set_config('test.uid','${uid}',false)`); const fails0=async(sql,params)=>{ try{ await db.query(sql,params); return null; }catch(e){ return e.message; } };
+  await as(""); ck("niet ingelogd kan niet aanmelden", /Niet ingelogd/.test(await fails0("select join_challenge('Sanne',1)")||""));
+  await as(uuid(501)); ck("lege naam geweigerd", /naam/.test(await fails0("select join_challenge(' ',1)")||""));
+  ck("onbekend team geweigerd", /Onbekend team/.test(await fails0("select join_challenge('Sanne',9)")||""));
+  const r=(await db.query("select (join_challenge('  Sanne de Vries ',1)).*")).rows[0]; ck("aanmelden maakt eigen rij met nette naam", r.name==="Sanne de Vries"&&r.team_id===1&&r.auth_user_id===uuid(501));
+  await db.query("select join_challenge('Sanne de Vries',2)"); ck("vóór de start mag je wisselen (geen dubbele rij)", (await db.query(`select count(*)::int n, max(team_id) t from participants where auth_user_id='${uuid(501)}'`)).rows[0].t===2);
+  await as(uuid(502)); await db.query("select join_challenge('Daan',2)");
+  const tm=(await db.query("select * from public_teams()")).rows; ck("public_teams telt aanmeldingen per team", tm[0].members===0&&tm[1].members===2, JSON.stringify(tm));
+  await db.exec("update challenge set start_date = (now() at time zone 'Europe/Amsterdam')::date - 1;");
+  ck("na de start: inschrijven gesloten", /gesloten/.test(await fails0("select join_challenge('Daan',1)")||""));
+  ck("na de start: team blijft staan", (await db.query(`select team_id from participants where auth_user_id='${uuid(502)}'`)).rows[0].team_id===2); }
 console.log(fails?`\n${fails} FOUT`:"\nalle SQL-tests geslaagd"); process.exit(fails?1:0);
