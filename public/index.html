@@ -38,22 +38,7 @@ label,.lab{display:block;font-weight:600;font-size:.9375rem;margin:0 0 8px}
 .field+.field{margin-top:16px}
 input[type=text],input[type=email]{font:inherit;font-size:1.05rem;width:100%;padding:14px 16px;border-radius:14px;border:1.5px solid var(--greyd);background:var(--white);color:var(--ink);transition:border-color .15s,box-shadow .15s}
 input[type=text]:focus,input[type=email]:focus{outline:none;border-color:var(--arrow);box-shadow:0 0 0 4px rgba(242,63,63,.14)}
-.kinds{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;background:var(--paper);padding:6px;border-radius:18px}
-.kinds label{margin:0;display:block;text-align:center;padding:11px 8px;border-radius:13px;cursor:pointer;font-weight:600;color:var(--fg2);transition:background .15s,color .15s}
-.kinds input{position:absolute;opacity:0;pointer-events:none}
-.kinds label:has(input:checked){background:var(--white);color:var(--ink);box-shadow:0 1px 4px rgba(40,48,45,.12)}
-.kinds label:has(input:focus-visible){outline:3px solid rgba(242,63,63,.35);outline-offset:2px}
 .hint{font-size:.8125rem;color:var(--fg2);margin-top:6px}
-.teams{display:grid;gap:10px}
-.team{display:grid;grid-template-columns:40px minmax(0,1fr) auto 24px;gap:14px;align-items:center;padding:14px 16px;border-radius:18px;border:1.5px solid var(--grey);cursor:pointer;background:var(--white);margin:0;transition:border-color .15s,background .15s,transform .15s}
-.team:hover{border-color:var(--greyd)}
-.team:has(input:checked){border-color:var(--line);background:#FFF8F8}
-.team .mark{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:600}
-.team b{display:block;font-size:1.06rem}.team small{display:block;color:var(--fg2);font-size:.875rem;font-weight:400}
-.team .n{font-size:.8125rem;color:var(--fg2);white-space:nowrap;font-weight:400}
-.team input{appearance:none;width:22px;height:22px;border-radius:50%;border:2px solid var(--greyd);margin:0;cursor:pointer}
-.team input:checked{border-color:var(--line);background:radial-gradient(var(--line) 0 5px,transparent 6px)}
-.team input:focus-visible{outline:3px solid rgba(242,63,63,.35);outline-offset:2px}
 .agree{display:grid;grid-template-columns:22px minmax(0,1fr);gap:12px;align-items:start;font-weight:400;font-size:.9375rem;line-height:1.45;margin:0;cursor:pointer}
 .agree input{width:20px;height:20px;margin-top:2px;accent-color:var(--line)}
 .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
@@ -74,7 +59,7 @@ input[type=text]:focus,input[type=email]:focus{outline:none;border-color:var(--a
 .privacy{font-size:.875rem;color:var(--fg2)}
 footer{padding:0 0 40px;font-size:.8125rem;color:var(--fg2)}
 @media (max-width:900px){.hero{grid-template-columns:1fr;padding-top:36px;padding-bottom:28px}.ribs{display:none}.grid{grid-template-columns:1fr}.card{padding:26px 20px;border-radius:24px}}
-@media (max-width:420px){.kinds label{padding:10px 4px;font-size:.9375rem}.team{grid-template-columns:36px minmax(0,1fr) 22px}.team .n{display:none}.btn{width:100%}}
+@media (max-width:420px){.btn{width:100%}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -92,17 +77,12 @@ footer{padding:0 0 40px;font-size:.8125rem;color:var(--fg2)}
   <div class="card" id="box">
     <form id="f" novalidate>
       <div class="sec"><p class="step"><b>1</b> Wie ben je?</p>
-        <div class="kinds" role="radiogroup" aria-label="Ik ben">
-          <label><input type="radio" name="kind" value="collega" checked>Collega</label>
-          <label><input type="radio" name="kind" value="klant">Klant</label>
-          <label><input type="radio" name="kind" value="extern">Extern</label></div>
-        <div class="field" style="margin-top:18px"><label for="name">Je naam</label><input id="name" type="text" autocomplete="name" maxlength="60" required></div>
-        <div class="field"><label for="email" id="email-lab">Je e-mailadres van Arrowline</label><input id="email" type="email" autocomplete="email" inputmode="email" placeholder="naam@arrowline.nl" maxlength="120" required></div>
-        <div class="field" id="company-f" hidden><label for="company">Je bedrijf</label><input id="company" type="text" autocomplete="organization" maxlength="80"></div>
+        <div class="field"><label for="name">Je naam</label><input id="name" type="text" autocomplete="name" maxlength="60" required></div>
+        <div class="field"><label for="email">Je e-mailadres</label><input id="email" type="email" autocomplete="email" inputmode="email" placeholder="naam@bedrijf.nl" maxlength="120" required></div>
+        <p class="hint">We delen je daarna in bij een team.</p>
         <div class="hp" aria-hidden="true"><label for="website">Laat dit veld leeg</label><input id="website" type="text" tabindex="-1" autocomplete="off"></div></div>
-      <div class="sec"><p class="step" id="teams-lab"><b>2</b> Kies je team</p><div class="teams" id="teams" role="radiogroup" aria-labelledby="teams-lab"><p class="hint">Teams laden…</p></div></div>
-      <div class="sec"><p class="step"><b>3</b> Bevestigen</p>
-        <label class="agree"><input type="checkbox" id="consent"><span>Arrowline mag mijn naam, e-mailadres<span id="consent-co"></span> gebruiken voor deze challenge. Teamgenoten zien mijn naam en stappen.</span></label>
+      <div class="sec"><p class="step"><b>2</b> Bevestigen</p>
+        <label class="agree"><input type="checkbox" id="consent"><span>Arrowline mag mijn naam en e-mailadres gebruiken voor deze challenge. Teamgenoten zien mijn naam en stappen.</span></label>
         <div id="msg" role="alert"></div>
         <button class="btn" id="go" type="submit">Aanmelden</button></div>
     </form>
@@ -119,43 +99,28 @@ footer{padding:0 0 40px;font-size:.8125rem;color:var(--fg2)}
 <footer class="wrap">Arrowline Stappenchallenge · januari 2027 · Loop slim, loop samen, loop voor jullie goede doel.</footer>
 <script>
 (() => {
-  const C = window.ARROWLINE_CONFIG || {}, $ = s => document.querySelector(s), COLORS = ["#F23F3F", "#28302D", "#BF2E3F", "#8A8F8C"];
+  const C = window.ARROWLINE_CONFIG || {}, $ = s => document.querySelector(s);
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const show = t => { $("#msg").innerHTML = t ? `<div class="msg">${esc(t)}</div>` : ""; };
-  const kind = () => document.querySelector("input[name=kind]:checked").value;
-  function syncKind() { const k = kind(), col = k === "collega";
-    $("#email-lab").textContent = col ? "Je e-mailadres van Arrowline" : "Je e-mailadres"; $("#email").placeholder = col ? "naam@arrowline.nl" : "naam@bedrijf.nl";
-    $("#company-f").hidden = col; $("#consent-co").textContent = col ? "" : " en bedrijf"; show(""); }
-  document.querySelectorAll("input[name=kind]").forEach(r => r.addEventListener("change", syncKind));
-  if (!C.supabaseUrl || !C.supabaseAnonKey) { $("#teams").innerHTML = ""; show("Het formulier is nog niet gekoppeld: vul supabaseUrl en supabaseAnonKey in config.js in."); $("#go").disabled = true; return; }
+  if (!C.supabaseUrl || !C.supabaseAnonKey) { show("Het formulier is nog niet gekoppeld: vul supabaseUrl en supabaseAnonKey in config.js in."); $("#go").disabled = true; return; }
   const rpc = async (fn, body) => {
     const r = await fetch(`${C.supabaseUrl.replace(/\/$/, "")}/rest/v1/rpc/${fn}`, { method: "POST", headers: { apikey: C.supabaseAnonKey, Authorization: `Bearer ${C.supabaseAnonKey}`, "Content-Type": "application/json" }, body: JSON.stringify(body || {}) });
     const txt = await r.text(); let j = null; try { j = txt ? JSON.parse(txt) : null; } catch (e) {}
     if (!r.ok) throw new Error((j && (j.message || j.msg)) || `Fout ${r.status}`); return j;
   };
-  let teams = [];
-  (async () => {
-    try { teams = await rpc("registration_teams"); }
-    catch (e) { $("#teams").innerHTML = ""; show(/fetch|network|load failed/i.test(e.message) ? "Geen verbinding. Controleer je internet en herlaad de pagina." : "De teams konden niet worden geladen: " + e.message); return; }
-    if (!teams.length) { $("#teams").innerHTML = `<p class="hint">Er zijn nog geen teams aangemaakt. Kom later terug.</p>`; $("#go").disabled = true; return; }
-    $("#teams").innerHTML = teams.map((t, i) => `<label class="team"><span class="mark" style="background:${COLORS[i % 4]}" aria-hidden="true">${i + 1}</span><span><b>${esc(t.name)}</b><small>${esc(t.charity || "Goed doel volgt")}</small></span><span class="n">${t.members} ${t.members === 1 ? "aanmelding" : "aanmeldingen"}</span><input type="radio" name="team" value="${t.id}" aria-label="${esc(t.name)}${t.charity ? ", " + esc(t.charity) : ""}"></label>`).join("");
-  })();
   const ics = () => { const s = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Arrowline//Stappenchallenge//NL\r\nBEGIN:VEVENT\r\nUID:stappenchallenge-2027@arrowline.nl\r\nDTSTAMP:20261201T000000Z\r\nDTSTART;VALUE=DATE:20270101\r\nDTEND;VALUE=DATE:20270201\r\nSUMMARY:Arrowline Stappenchallenge\r\nDESCRIPTION:31 dagen\\, minimaal 10.000 stappen per dag. Loop slim\\, loop samen!\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n";
     const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([s], { type: "text/calendar" })); a.download = "arrowline-stappenchallenge.ics"; document.body.appendChild(a); a.click(); a.remove(); };
   $("#f").addEventListener("submit", async e => {
     e.preventDefault(); show("");
     if ($("#website").value) return;                                         // spamval: bots vullen dit verborgen veld in
-    const k = kind(), name = $("#name").value.trim(), email = $("#email").value.trim().toLowerCase(), company = $("#company").value.trim(), t = document.querySelector("input[name=team]:checked");
+    const name = $("#name").value.trim(), email = $("#email").value.trim().toLowerCase();
     if (name.length < 2) { show("Vul je naam in."); $("#name").focus(); return; }
     if (!/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(email)) { show("Vul een geldig e-mailadres in."); $("#email").focus(); return; }
-    if (k === "collega" && !/@arrowline\.nl$/i.test(email)) { show("Collega’s gebruiken hun e-mailadres van Arrowline (@arrowline.nl). Ben je klant of extern? Kies dat bovenaan."); $("#email").focus(); return; }
-    if (k !== "collega" && company.length < 2) { show("Vul de naam van je bedrijf in."); $("#company").focus(); return; }
-    if (!t) { show("Kies een team."); return; }
     if (!$("#consent").checked) { show("Vink aan dat we je gegevens voor de challenge mogen gebruiken."); $("#consent").focus(); return; }
     $("#go").disabled = true; $("#go").textContent = "Even geduld…";
     try {
-      const res = await rpc("register", { p_name: name, p_email: email, p_team: +t.value, p_kind: k, p_company: k === "collega" ? null : company, p_consent: true }), team = teams.find(x => x.id === +t.value);
-      $("#box").innerHTML = `<div class="done" role="status"><div class="ok" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></div><h2>${res === "bijgewerkt" ? "Aanmelding bijgewerkt." : `Je doet mee, ${esc(name.split(" ")[0])}!`}</h2><p>Je loopt in <b style="color:var(--ink)">${esc(team ? team.name : "je team")}</b>${team && team.charity ? `, voor ${esc(team.charity)}` : ""}. Vóór 1 januari krijg je een e-mail met de link naar de app.</p>
+      const res = await rpc("register", { p_name: name, p_email: email, p_consent: true });
+      $("#box").innerHTML = `<div class="done" role="status"><div class="ok" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></div><h2>${res === "bijgewerkt" ? "Aanmelding bijgewerkt." : `Je doet mee, ${esc(name.split(" ")[0])}!`}</h2><p>We delen je in bij een team. Vóór 1 januari krijg je een e-mail met de link naar de app.</p>
         <div class="acts"><button class="btn" type="button" id="cal">Zet 1 januari in je agenda</button><button class="btn ghost" type="button" id="again">Nog iemand aanmelden</button></div></div>`;
       $("#cal").addEventListener("click", ics); $("#again").addEventListener("click", () => location.reload());
       window.scrollTo({ top: $("#box").getBoundingClientRect().top + scrollY - 20, behavior: "smooth" });
