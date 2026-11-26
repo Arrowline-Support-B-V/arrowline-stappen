@@ -96,7 +96,7 @@ footer{padding:0 0 48px}.foot{background:var(--white);border-radius:28px;padding
   </div>
 </section>
 </main>
-<footer class="wrap"><div class="foot"><p class="foot-slogan"><span>Loop slim</span><span>Loop samen</span><span>Loop voor een goed doel</span></p><p class="foot-meta">Arrowline Stappenchallenge · januari 2027</p></div></footer>
+<footer class="wrap"><div class="foot"><p class="foot-slogan"><span>Start 2027 goed</span><span>Loop samen</span><span>Loop voor een goed doel</span></p><p class="foot-meta">Arrowline Stappenchallenge · januari 2027</p></div></footer>
 <script>
 (() => {
   const C = window.ARROWLINE_CONFIG || {}, $ = s => document.querySelector(s);
@@ -108,7 +108,7 @@ footer{padding:0 0 48px}.foot{background:var(--white);border-radius:28px;padding
     const txt = await r.text(); let j = null; try { j = txt ? JSON.parse(txt) : null; } catch (e) {}
     if (!r.ok) throw new Error((j && (j.message || j.msg)) || `Fout ${r.status}`); return j;
   };
-  const ics = () => { const s = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Arrowline//Stappenchallenge//NL\r\nBEGIN:VEVENT\r\nUID:stappenchallenge-2027@arrowline.nl\r\nDTSTAMP:20261201T000000Z\r\nDTSTART;VALUE=DATE:20270101\r\nDTEND;VALUE=DATE:20270201\r\nSUMMARY:Arrowline Stappenchallenge\r\nDESCRIPTION:31 dagen\\, minimaal 10.000 stappen per dag. Loop slim\\, loop samen!\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n";
+  const ics = () => { const s = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Arrowline//Stappenchallenge//NL\r\nBEGIN:VEVENT\r\nUID:stappenchallenge-2027@arrowline.nl\r\nDTSTAMP:20261201T000000Z\r\nDTSTART;VALUE=DATE:20270101\r\nDTEND;VALUE=DATE:20270201\r\nSUMMARY:Arrowline Stappenchallenge\r\nDESCRIPTION:31 dagen\\, minimaal 10.000 stappen per dag. Start 2027 goed\\, loop samen!\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n";
     const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([s], { type: "text/calendar" })); a.download = "arrowline-stappenchallenge.ics"; document.body.appendChild(a); a.click(); a.remove(); };
   $("#f").addEventListener("submit", async e => {
     e.preventDefault(); show("");
