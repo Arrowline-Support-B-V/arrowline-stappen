@@ -11,6 +11,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Arrowline Stappen">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
+<script src="config.js"></script>
+<script src="vendor/supabase.js"></script>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" href="icons/icon-192.png">
@@ -771,6 +773,21 @@ table.pts tr.over td{font-weight:600}
 .tabbar a:active svg{transform:scale(.92)}
 .tabbar a[aria-current="page"]::before{top:2px}
 @media (prefers-reduced-motion:reduce){.tabbar svg{transition:none}}
+
+/* ───── live: inloggen en aanmelden ───── */
+.lv-login{display:flex;justify-content:center;padding-top:40px}
+.lv-card{width:min(520px,100%);padding:36px 34px}.lv-card h1{font-size:clamp(2.4rem,6vw,3.4rem);margin:6px 0 10px}.lv-card .lede{margin-bottom:22px}
+.lv-form{display:grid;gap:10px}.lv-form label{font-weight:600;font-size:.9375rem}
+.lv-form input{font:inherit;font-size:1.05rem;padding:14px 16px;border-radius:14px;border:1.5px solid var(--grey-d);background:var(--white);color:var(--fg);width:100%}
+.lv-form input:focus{outline:none;border-color:var(--arrow);box-shadow:0 0 0 3px rgba(242,63,63,.15)}
+.lv-form .btn{justify-self:start;margin-top:6px}
+.otp{font-family:"Courier New",Courier,monospace!important;font-size:1.8rem!important;letter-spacing:.4em;text-align:center}
+.lv-msg{padding:12px 16px;border-radius:14px;margin:0 0 16px;font-size:.9375rem;line-height:1.45}
+.lv-msg.err{background:#fff3f3;box-shadow:inset 3px 0 0 var(--line);color:#7a1d28}.lv-msg.ok{background:#f1f7f2;box-shadow:inset 3px 0 0 #2f7a45;color:#1f4d2c}
+.lv-join{display:flex;gap:16px;align-items:end;flex-wrap:wrap;margin-top:20px}.lv-join>div{flex:1 1 280px;display:grid;gap:8px}.lv-join .btn{margin:0}
+.lv-intro{display:flex;justify-content:space-between;gap:24px;align-items:end;margin-bottom:24px}
+html.live .demo-scale{display:none}
+[hidden]{display:none!important}
 
 </style>
 </head>
@@ -1806,11 +1823,196 @@ document.addEventListener("change", e => {
   if (e.target.id === "shotok") { state.up.ok = e.target.checked; render(true); }
   if (e.target.id === "demoscn") state.up.demo = e.target.value;
 });
-addEventListener("hashchange", () => render(false));
+addEventListener("hashchange", () => LIVE ? liveRoute() : render(false));
 addEventListener("scroll", () => $(".top").classList.toggle("scrolled", scrollY > 8), { passive: true });
 function renderFoot() { $("#foot").innerHTML = `<div class="seg demo-scale" role="group" aria-label="Demo: aantal deelnemers"><span class="ds-l">Demo-schaal</span>${[[60, "60 deelnemers · 2 teams"], [150, "150 · 5 teams"], [300, "300 · 10 teams"]].map(([n, l]) => `<button data-action="scale" data-v="${n}" aria-pressed="${SCALE === n}">${l}</button>`).join("")}</div><p><b>Prototype · demodata.</b> Gesimuleerd per ${dFmt(D, { day: "numeric", month: "long", year: "numeric" })} (dag ${D}). Dit zijn geen echte gezondheidsgegevens. De namen van de goede doelen zijn nog niet ingevuld.<br><a class="link" href="#beheer">Beheer (demo)</a> · Kaartgegevens: Natural Earth, NASA Earth Observatory (Blue Marble) en een wereldwijd hoogtemodel.</p>`; }
-renderFoot();
-render(false);
+
+/* ═════════════ LIVE: echte gegevens uit Supabase ═════════════
+   Stap 1: inloggen met een code per e-mail, aanmelden voor een team, en de schermen vóór de start.
+   Zonder config.js (zoals in het chatvoorbeeld) draait de demo; met een anon key draait alles live. */
+const CONF = window.ARROWLINE_CONFIG || {};
+const LIVE = typeof window.ARROWLINE_CONFIG === "object" && window.ARROWLINE_CONFIG !== null;     // config.js aanwezig = de echte app; de demo draait alleen zonder config.js (chatvoorbeeld)
+const SETUP_MISSING = () => [
+  !CONF.supabaseUrl && "supabaseUrl is leeg in config.js",
+  !CONF.supabaseAnonKey && "supabaseAnonKey is leeg in config.js (Supabase → Project Settings → API → anon public)",
+  /service_role/.test(String(CONF.supabaseAnonKey || "")) && "Dit lijkt de service_role key. Gebruik de anon public key!",
+  !(window.supabase && window.supabase.createClient) && "vendor/supabase.js is niet geladen (ontbreekt het bestand in public/vendor/?)",
+].filter(Boolean);
+const LV = { sb: null, user: null, me: null, teams: [], ch: null, loaded: false,
+  login: { step: "email", email: "", busy: false, msg: null }, su: { team: null, name: null, busy: false, msg: null }, flash: null };
+const todayISO = () => new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Amsterdam" }).format(new Date());
+const daysBetween = (a, b) => Math.round((Date.parse(b + "T12:00:00Z") - Date.parse(a + "T12:00:00Z")) / 86400000);
+const fmtISO = (iso, o) => new Date(iso + "T12:00:00Z").toLocaleDateString(LOC, { ...o, timeZone: "UTC" });
+const liveTeams = () => LV.teams.map((t, i) => ({ ...t, members: t.members || 0, color: TEAM_STYLE[i % 12][0], shape: TEAM_STYLE[i % 12][1] }));
+const msgBox = m => m ? `<div class="lv-msg ${m.kind}" role="${m.kind === "err" ? "alert" : "status"}">${esc(m.text)}</div>` : "";
+const nameFromEmail = e => (e || "").split("@")[0].split(/[._-]+/).filter(Boolean).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+const isStandalone = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+const started = () => LV.ch && todayISO() >= LV.ch.start_date;
+function lvErr(e) {
+  const t = (e && (e.message || e.msg || e.error_description)) || String(e);
+  if (/Failed to fetch|NetworkError|Load failed|network/i.test(t)) return "Geen verbinding. Controleer je internet en probeer het opnieuw.";
+  if (/not allowed|otp_disabled|signups? not allowed|user not found/i.test(t)) return "Dit e-mailadres is (nog) niet uitgenodigd. Gebruik je werkadres, of vraag de organisatie om een uitnodiging.";
+  if (/expired|invalid|incorrect/i.test(t)) return "Deze code klopt niet of is verlopen. Controleer hem, of vraag een nieuwe code aan.";
+  if (/rate|too many|security purposes|seconds/i.test(t)) return "Even wachten: je hebt net al een code aangevraagd. Probeer het over een minuut opnieuw.";
+  if (/gesloten/i.test(t)) return "Inschrijven is gesloten: de challenge is gestart.";
+  if (/naam/i.test(t)) return "Vul je naam in (2 tot 60 tekens).";
+  return "Er ging iets mis: " + t;
+}
+
+async function lvLoad() {
+  const [c, tm, me] = await Promise.all([LV.sb.from("challenge").select("*").limit(1), LV.sb.rpc("public_teams"), LV.sb.from("participants").select("*").limit(1)]);
+  const e = c.error || tm.error || me.error; if (e) throw e;
+  if (!c.data || !c.data.length) throw new Error("Challenge-instellingen ontbreken in de database");
+  LV.ch = c.data[0]; LV.teams = tm.data || []; LV.me = (me.data || [])[0] || null; LV.loaded = true;
+  N_TEAMS = Math.max(2, LV.teams.length); setRoute(N_TEAMS <= 3 ? "S" : N_TEAMS <= 7 ? "M" : "L");      // de route groeit mee met het aantal teams
+  try { const a = localStorage.getItem("av:" + LV.user.id); state.avatar = a != null ? +a : (LV.user.id.charCodeAt(0) + LV.user.id.charCodeAt(1)) % AVATARS.length; } catch (e2) {}
+}
+async function startLive() {
+  document.documentElement.classList.add("live");
+  $("#foot").innerHTML = `<p><b>Arrowline Stappenchallenge</b> · januari 2027 · Loop slim, loop samen, loop voor jullie goede doel.</p>`;
+  const miss = SETUP_MISSING();
+  if (miss.length) {                                                       // nooit stilletjes de demo tonen: zeg precies wat er ontbreekt
+    $$(".top nav [data-nav], .me, .tabbar").forEach(n => n.hidden = true);
+    $("#view").innerHTML = `<div class="view lv-login"><div class="card lv-card"><p class="kicker">Instellen</p><h1>Bijna klaar</h1><p class="lede">De app kan nog geen verbinding maken met de database. Dit moet nog gebeuren:</p><ul class="facts">${miss.map(m => `<li>${esc(m)}</li>`).join("")}</ul><p class="small muted" style="margin-top:16px">Pas <code>public/config.js</code> aan, push naar GitHub en herlaad deze pagina.</p></div></div>`;
+    document.title = "Instellen · Arrowline Stappenchallenge"; return;
+  }
+  LV.sb = window.supabase.createClient(CONF.supabaseUrl, CONF.supabaseAnonKey, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
+  try { const { data } = await LV.sb.auth.getSession(); LV.user = data.session ? data.session.user : null; } catch (e) { LV.user = null; }
+  LV.sb.auth.onAuthStateChange((ev, s) => { const u = s ? s.user : null; if ((u && u.id) !== (LV.user && LV.user.id)) { LV.user = u; LV.loaded = false; LV.me = null; liveRoute(); } });
+  liveRoute();
+}
+function liveNav(key) {
+  const pre = !started();
+  $$(".nav [data-nav], .top nav [data-nav]").forEach(a => { if (a.closest(".tabbar")) return; a.hidden = !!LV.user && pre && !["dashboard", "route", "regels"].includes(a.dataset.nav); if (!LV.user) a.hidden = true; });
+  $$("[data-nav]").forEach(a => a.dataset.nav === key ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current"));
+  const me = $(".me"); if (me) { me.hidden = !LV.user; const n = $(".me-name"); if (n) n.textContent = LV.me ? LV.me.name.split(" ")[0] : ""; }
+  const tb = $(".tabbar"); if (tb && !tb.dataset.live) { tb.dataset.live = "1";
+    const I = d => `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">${d}</svg>`;
+    tb.innerHTML = `<a href="#dashboard" data-nav="dashboard">${I('<path d="M4 10.5 12 4l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5.5h-5V20H5a1 1 0 0 1-1-1v-8.5Z"/>')}<span>Home</span></a>`
+      + `<a href="#route" data-nav="route">${I('<path d="M6 20a2.5 2.5 0 1 1 0-5c3 0 3.5-3 6-3s3 3 6 3"/><circle cx="18" cy="6.5" r="2.5"/><path d="M18 9v6"/>')}<span>Route</span></a>`
+      + `<a href="#regels" data-nav="regels">${I('<path d="M6 4h9l3 3v13H6z"/><path d="M9 11h6M9 14.5h6M9 8h3"/>')}<span>Spelregels</span></a>`
+      + `<a href="#profile" data-nav="profile">${I('<circle cx="12" cy="8" r="3.6"/><path d="M5 20c.7-3.8 3.5-6.2 7-6.2s6.3 2.4 7 6.2"/>')}<span>Ik</span></a>`;
+    tb.style.gridTemplateColumns = "repeat(4,minmax(0,1fr))"; }
+  if (tb) { tb.hidden = !LV.user; $$("[data-nav]", tb).forEach(a => a.dataset.nav === key ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current")); }
+}
+function lvRender(html, key) { activeMap && activeMap.destroy(); activeMap = null; $("#view").innerHTML = html; liveNav(key); refreshChrome(); }
+let lvFirst = true;
+async function liveRoute() {
+  const h = (location.hash || "#dashboard").slice(1).split(/[&=]/)[0] || "dashboard", prevScroll = lvFirst;
+  if (!LV.user) { lvRender(viewLogin(), "login"); lvFocus(prevScroll); return; }
+  if (!LV.loaded) { lvRender(`<div class="view"><p class="muted" role="status" style="padding:80px 0">Even laden…</p></div>`, ""); try { await lvLoad(); } catch (e) { lvRender(viewLvError(e), ""); return; } }
+  if (!LV.me && h !== "regels" && h !== "route") { lvRender(started() ? viewClosed() : viewSignup(), "dashboard"); lvFocus(prevScroll); return; }
+  const V = { route: [viewLvRoute, "route"], regels: [viewRules, "regels"], profile: [viewLvProfile, "profile"], aanmelden: [started() ? viewClosed : viewSignup, "dashboard"] };
+  const [fn, key] = V[h] || [started() ? viewStarted : viewPreStart, "dashboard"];
+  lvRender(fn(), key); scrollTo(0, 0); lvFocus(prevScroll);
+  document.title = `${({ route: "Route", regels: "Spelregels", profile: "Profiel", aanmelden: "Aanmelden" })[h] || "Home"} · Arrowline Stappenchallenge`;
+}
+function lvFocus(first) { lvFirst = false; if (!first) focusTitle(); }
+
+/* ───── schermen ───── */
+function viewLogin() {
+  const L = LV.login;
+  const email = `<form class="lv-form" data-lv-form="email" novalidate><label for="lv-email">Je werkmailadres</label><input id="lv-email" name="email" type="email" autocomplete="email" inputmode="email" required value="${esc(L.email)}" placeholder="naam@arrowline.nl"><button class="btn" type="submit"${L.busy ? " disabled" : ""}>${L.busy ? "Even geduld…" : "Stuur mij een code"}</button></form>`;
+  const code = `<form class="lv-form" data-lv-form="code" novalidate><label for="lv-code">Code uit de e-mail</label><p class="small muted" style="margin:0 0 10px">Gestuurd naar <b>${esc(L.email)}</b>. Kijk ook even in je ongewenste e-mail.</p><input id="lv-code" name="code" class="otp" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="10" required placeholder="123456"><button class="btn" type="submit"${L.busy ? " disabled" : ""}>${L.busy ? "Controleren…" : "Inloggen"}</button>
+    <p class="small" style="margin-top:16px"><button type="button" class="link small" data-lv="resend">Nieuwe code sturen</button> · <button type="button" class="link small" data-lv="otheremail">Ander e-mailadres</button></p></form>`;
+  return `<div class="view lv-login"><div class="card lv-card"><p class="kicker">Arrowline Stappenchallenge · januari 2027</p><h1>Inloggen</h1><p class="lede">${L.step === "email" ? "Vul je werkmailadres in. Je krijgt een code per e-mail, een wachtwoord heb je niet nodig." : "Typ de code uit de e-mail. Het kan een minuutje duren voordat hij binnen is."}</p>${msgBox(L.msg)}${L.step === "email" ? email : code}</div></div>`;
+}
+function viewSignup() {
+  const T = liveTeams(), S = LV.su, sel = S.team != null ? S.team : LV.me ? LV.me.team_id : null, nm = S.name != null ? S.name : LV.me ? LV.me.name : nameFromEmail(LV.user.email);
+  if (!T.length) return `<div class="view"><header class="head"><div><p class="kicker">Aanmelden</p><h1>Nog even geduld</h1><p class="lede">De teams worden nog aangemaakt. Kom later terug, je krijgt bericht.</p></div></header></div>`;
+  const cards = T.map(t => `<button class="chcard${sel === t.id ? " on" : ""}" type="button" data-lv="pickteam" data-v="${t.id}" role="radio" aria-checked="${sel === t.id}"><span class="chtop"><span class="eyebrow">Team</span><span class="chrad${sel === t.id ? " on" : ""}" aria-hidden="true"><i></i></span></span><span class="chn" style="display:flex;gap:12px;align-items:center">${mark(t, 40)} ${esc(t.name)}</span><span class="chdates">${esc(t.charity || "Goed doel volgt")}</span><span class="chkm"><b>${t.members}</b> ${t.members === 1 ? "deelnemer" : "deelnemers"}</span></button>`).join("");
+  return `<div class="view"><header class="head"><div><p class="kicker">${LV.me ? "Team wijzigen" : "Aanmelden"} · kan tot de start op ${fmtISO(LV.ch.start_date, { day: "numeric", month: "long" })}</p><h1>${LV.me ? "Wissel van team." : "Kies je team."}</h1><p class="lede">${T.length} teams, ${T.length} goede doelen, ${LV.ch.days} dagen. Na de start staat je keuze vast.</p></div></header>
+  ${msgBox(S.msg)}<div class="chgrid teams${T.length > 4 ? " many" : ""}" role="radiogroup" aria-label="Team">${cards}</div>
+  <form class="card block lv-form lv-join" data-lv-form="join" novalidate><div><label for="lv-name">Je naam zoals collega’s hem zien</label><input id="lv-name" name="name" type="text" autocomplete="name" maxlength="60" required value="${esc(nm)}"></div>
+    <button class="btn" type="submit"${S.busy || sel == null ? " disabled" : ""}>${S.busy ? "Even geduld…" : LV.me ? "Opslaan" : "Aanmelden"}</button>${LV.me ? `<a class="link small" href="#dashboard">Annuleren</a>` : ""}</form></div>`;
+}
+function viewPreStart() {
+  const T = liveTeams(), my = T.find(t => t.id === LV.me.team_id) || T[0], today = todayISO(), d = daysBetween(today, LV.ch.start_date), hr = +new Intl.DateTimeFormat("nl-NL", { hour: "numeric", timeZone: "Europe/Amsterdam" }).format(new Date());
+  const greet = hr < 12 ? "Goedemorgen" : hr < 18 ? "Goedemiddag" : "Goedenavond", flash = LV.flash; LV.flash = null;
+  const install = isStandalone() ? "" : `<article class="card"><h2>Zet de app op je beginscherm</h2><p class="muted" style="margin-bottom:12px">Dan open je hem met één tik, net als een gewone app.</p><ul class="facts"><li><b>iPhone:</b> open deze pagina in Safari, tik op Deel en kies Zet op beginscherm.</li><li><b>Android:</b> open deze pagina in Chrome, tik op ⋮ en kies App installeren.</li><li>Log daarna in de app in met je e-mailadres en de code.</li></ul></article>`;
+  return `<div class="view"><header class="intro lv-intro"><div><p class="kicker">${cap1(fmtISO(today, { weekday: "long", day: "numeric", month: "long", year: "numeric" }))}</p><h1>${greet}, ${esc(LV.me.name.split(" ")[0])}.</h1>
+    <p class="lede">De challenge start op ${fmtISO(LV.ch.start_date, { weekday: "long", day: "numeric", month: "long" })}. Je loopt mee in ${esc(my ? my.name : "je team")}${my && my.charity ? `, voor ${esc(my.charity)}` : ""}.</p></div>
+    <div class="count"><b class="tn">${Math.max(0, d)}</b><span>${d === 1 ? "dag" : "dagen"} tot de start</span></div></header>
+  ${flash ? msgBox(flash) : ""}
+  <div class="cols2 block"><article class="card"><span class="eyebrow">Jouw team</span>${my ? `<h2 style="display:flex;gap:12px;align-items:center;margin-top:10px">${mark(my, 36)} ${esc(my.name)}</h2><p class="muted" style="margin:6px 0 14px">${esc(my.charity || "Goed doel volgt")} · ${my.members} ${my.members === 1 ? "deelnemer" : "deelnemers"}</p>` : ""}
+      <p class="small muted">Tot de start kun je nog van team wisselen. <a class="link" href="#aanmelden">Team wijzigen</a></p></article>
+    <article class="card"><span class="eyebrow">Zo werkt het</span><ul class="facts" style="margin-top:12px"><li>Loop elke dag minimaal ${fmt(LV.ch.min_steps)} stappen.</li><li>Maak ’s avonds een screenshot van je stappenteller en upload hem in de app.</li><li>Haalt iedereen in je team ${fmt(LV.ch.min_steps)}+, dan krijgt het team +${LV.ch.team_bonus} bonuspunten.</li></ul><p class="small" style="margin-top:12px"><a class="link" href="#regels">Alle spelregels</a></p></article></div>
+  <div class="cols2 block">${install}<article class="card"><span class="eyebrow">De ronde</span><h2 style="margin-top:10px">${esc(ROUTE_INFO.name)}</h2><p class="muted" style="margin:6px 0 14px">${fmt2(ROUTE_KM)} km · ${UD.length} plaatsen · ${ROUTE_INFO.provs.length} provincies. Alle teams starten in Beverwijk.</p>${strip(0, { you: false })}<p class="small" style="margin-top:10px"><a class="link" href="#route">Bekijk de route en de weetjes</a></p></article></div>
+  <article class="card block"><span class="eyebrow">Teams · ${T.reduce((a, t) => a + t.members, 0)} aanmeldingen</span>${T.map((t, i) => `<div class="mini-row${t.id === LV.me.team_id ? " me" : ""}"><span class="pos">${i + 1}</span>${mark(t, 28)}<span class="nm">${esc(t.name)}<small class="muted" style="display:block;font-weight:400">${esc(t.charity || "Goed doel volgt")}</small></span><span class="km">${t.members}</span></div>`).join("")}</article></div>`;
+}
+function viewStarted() { return `<div class="view"><header class="head"><div><p class="kicker">De challenge is begonnen</p><h1>Hij loopt!</h1><p class="lede">Stappen doorgeven, de stand en de kaart komen in de volgende versie van de app.</p></div></header></div>`; }
+function viewClosed() { return `<div class="view"><header class="head"><div><p class="kicker">Aanmelden</p><h1>Inschrijven is gesloten</h1><p class="lede">De challenge is al gestart. Wil je toch meedoen? Neem contact op met de organisatie.</p></div></header><p><button class="btn ghost" type="button" data-lv="logout">Uitloggen</button></p></div>`; }
+function viewLvError(e) { return `<div class="view"><header class="head"><div><p class="kicker">Oeps</p><h1>Laden lukte niet</h1><p class="lede">${esc(lvErr(e))}</p></div></header><p style="display:flex;gap:10px"><button class="btn" type="button" data-lv="retry">Opnieuw proberen</button><button class="btn ghost" type="button" data-lv="logout">Uitloggen</button></p></div>`; }
+function viewLvRoute() {
+  const legs = DEST.map((d, i) => d.id === "finish" ? `<div class="leg2 fin"><span class="dot"><i></i></span><div class="lg-h"><b>Finish: Beverwijk</b><span class="small muted">${fmt1(d.cum - DEST[i - 1].cum)} km vanaf ${esc(DEST[i - 1].name)}</span></div><span class="km">${fmt1(d.cum)} km</span></div>`
+    : `<details class="leg2"${i === 0 ? " open" : ""}><summary><span class="dot"><i></i></span><div class="lg-h"><b>${esc(d.name)}${i === 0 ? " · start" : ""}</b><span class="small muted">${d.prov ? esc(d.prov) + " · " : ""}${i === 0 ? "Arrowline-kantoor" : `${fmt1(d.cum - DEST[i - 1].cum)} km vanaf ${esc(DEST[i - 1].name)}`}</span></div><span class="lg-t"></span><span class="km">${fmt1(d.cum)} km</span><span class="chev" aria-hidden="true"></span></summary><ul class="facts">${(d.facts || []).map(f => `<li>${esc(f)}</li>`).join("")}</ul></details>`).join("");
+  return `<div class="view"><header class="head"><div><p class="kicker">${esc(ROUTE_INFO.name)} · ${fmt2(ROUTE_KM)} km · ${UD.length} plaatsen · ${ROUTE_INFO.provs.length} provincies</p><h1>Route</h1><p class="lede">Van Beverwijk naar Beverwijk, door ${ROUTE_INFO.provs.join(", ").replace(/, ([^,]*)$/, " en $1")}. Klik op een plaats voor de weetjes.</p></div></header>
+  <div class="route-layout"><article class="card"><div class="legs-head"><h2>Plaatsen op de route</h2><button class="link small" data-action="legsall">Alle weetjes tonen</button></div><div class="legs2">${legs}</div></article>
+  <aside class="route-side" aria-label="Over de route"><article class="card"><span class="eyebrow">Vóór de start</span><p style="margin:10px 0 0">Op 1 januari vertrekken alle teams uit Beverwijk. Hoe verder je team loopt, hoe meer plaatsen jullie onderweg tegenkomen.</p><p class="small muted" style="margin-top:12px">Gemiddeld ${fmt(15000)} stappen per teamlid per dag = de hele ronde in ${LV.ch ? LV.ch.days : 31} dagen.</p></article>
+    <article class="card"><h2>De route groeit mee</h2><p class="small muted" style="margin-bottom:12px">Hoe meer teams, hoe langer de ronde.</p>${ROUTE_TABLE.map(r => `<div class="cprow${r.key === ROUTE_INFO.key ? " done" : ""}" style="grid-template-columns:14px minmax(0,1fr) auto"><i></i><span><b class="sb">${esc(r.name)}</b><br><span class="small muted">${r.teams} · ${r.provs} provincies</span></span><span class="km">${fmt(r.km)} km</span></div>`).join("")}</article></aside></div></div>`;
+}
+function viewLvProfile() {
+  const T = liveTeams(), my = T.find(t => t.id === LV.me.team_id);
+  return `<div class="view"><header class="head"><div class="profile-head">${av(state.avatar, 96)}<div><p class="kicker">Jouw profiel</p><h1 style="margin-top:8px;font-size:clamp(2.2rem,5vw,3.6rem)">${esc(LV.me.name)}</h1><p class="muted" style="margin-top:10px">${esc(LV.user.email)}</p></div></div></header>
+  <div class="cols2 block"><article class="card"><h2>Mijn challenge</h2>
+      <div class="chrow on"><span><b class="sb">Team</b></span><span style="display:inline-flex;gap:8px;align-items:center">${my ? mark(my, 20) + " " + esc(my.name) : "–"}</span></div>
+      <div class="chrow on"><span><b class="sb">Goed doel</b></span><span>${esc((my && my.charity) || "Goed doel volgt")}</span></div>
+      <div class="chrow on"><span><b class="sb">Start</b></span><span>${fmtISO(LV.ch.start_date, { weekday: "long", day: "numeric", month: "long" })}</span></div>
+      <p class="small" style="margin-top:14px">${started() ? "Je teamkeuze staat vast." : `<a class="link" href="#aanmelden">Naam of team wijzigen</a> (kan tot de start)`}</p></article>
+    <article class="card"><h2>Avatar</h2><p class="muted" style="margin-bottom:20px">Kies er één. Hij verschijnt in je team, op de ranglijst en op de kaart.</p><div class="picker">${AVATARS.map((_, i) => `<button type="button" data-lv="avatar" data-v="${i}" aria-pressed="${state.avatar === i}" aria-label="Avatar ${i + 1}">${av(i, 56)}</button>`).join("")}</div></article></div>
+  <div class="cols2 block"><article class="card"><h2>Privacy</h2><div class="stack" style="max-width:52ch"><p>Arrowline gebruikt <b class="sb">alleen de screenshot die je zelf uploadt</b> om je dagelijkse stappen te controleren.</p><p>Je e-mailadres is alleen zichtbaar voor jou en de beheerders.</p></div></article>
+    <article class="card"><h2>Uitloggen</h2><p class="muted" style="margin-bottom:16px">Je blijft normaal ingelogd. Op een gedeelde computer kun je hier uitloggen.</p><button class="btn ghost" type="button" data-lv="logout">Uitloggen</button></article></div></div>`;
+}
+
+/* ───── acties ───── */
+document.addEventListener("submit", async e => {
+  const f = e.target.closest("[data-lv-form]"); if (!f || !LIVE) return; e.preventDefault();
+  const kind = f.dataset.lvForm;
+  if (kind === "email") {
+    const email = f.elements.namedItem("email").value.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(email)) { LV.login.msg = { kind: "err", text: "Vul een geldig e-mailadres in." }; LV.login.email = email; liveRoute(); return; }
+    LV.login = { ...LV.login, email, busy: true, msg: null }; liveRoute();
+    const { error } = await LV.sb.auth.signInWithOtp({ email, options: { shouldCreateUser: false, emailRedirectTo: location.origin + location.pathname } });
+    LV.login.busy = false;
+    if (error) LV.login.msg = { kind: "err", text: lvErr(error) }; else { LV.login.step = "code"; LV.login.msg = { kind: "ok", text: "Code verstuurd. Hij is een tijdje geldig." }; }
+    liveRoute(); setTimeout(() => { const i = $(LV.login.step === "code" ? "#lv-code" : "#lv-email"); i && i.focus(); }, 30);
+  }
+  if (kind === "code") {
+    const token = f.elements.namedItem("code").value.replace(/\D/g, "");
+    if (token.length < 6) { LV.login.msg = { kind: "err", text: "De code bestaat uit 6 cijfers." }; liveRoute(); return; }
+    LV.login.busy = true; LV.login.msg = null; liveRoute();
+    const { data, error } = await LV.sb.auth.verifyOtp({ email: LV.login.email, token, type: "email" });
+    LV.login.busy = false;
+    if (error) { LV.login.msg = { kind: "err", text: lvErr(error) }; liveRoute(); return; }
+    LV.login = { step: "email", email: "", busy: false, msg: null }; LV.user = data.user || (data.session && data.session.user); LV.loaded = false; liveRoute();
+  }
+  if (kind === "join") {
+    const name = f.elements.namedItem("name").value.trim(), team = LV.su.team != null ? LV.su.team : LV.me && LV.me.team_id;
+    LV.su.name = name;
+    if (name.length < 2) { LV.su.msg = { kind: "err", text: "Vul je naam in (2 tot 60 tekens)." }; liveRoute(); return; }
+    if (team == null) { LV.su.msg = { kind: "err", text: "Kies eerst een team." }; liveRoute(); return; }
+    const wasMember = !!LV.me; LV.su.busy = true; LV.su.msg = null; liveRoute();
+    const { data, error } = await LV.sb.rpc("join_challenge", { p_name: name, p_team: team });
+    LV.su.busy = false;
+    if (error) { LV.su.msg = { kind: "err", text: lvErr(error) }; liveRoute(); return; }
+    LV.me = Array.isArray(data) ? data[0] : data; LV.su = { team: null, name: null, busy: false, msg: null };
+    const tm = await LV.sb.rpc("public_teams"); if (!tm.error) LV.teams = tm.data || LV.teams;
+    const t = liveTeams().find(x => x.id === LV.me.team_id); LV.flash = { kind: "ok", text: wasMember ? `Opgeslagen. Je loopt mee in ${t ? t.name : "je team"}.` : `Welkom! Je loopt mee in ${t ? t.name : "je team"}.` };
+    if (location.hash === "#dashboard") liveRoute(); else location.hash = "#dashboard";
+  }
+});
+document.addEventListener("click", async e => {
+  const b = e.target.closest("[data-lv]"); if (!b || !LIVE) return; const v = b.dataset.v;
+  switch (b.dataset.lv) {
+    case "pickteam": LV.su.team = +v; const n = $("#lv-name"); if (n) LV.su.name = n.value; liveRoute(); break;
+    case "resend": LV.login.step = "email"; liveRoute(); setTimeout(() => { const f = $("[data-lv-form=email]"); f && f.requestSubmit(); }, 10); break;
+    case "otheremail": LV.login = { step: "email", email: "", busy: false, msg: null }; liveRoute(); break;
+    case "logout": await LV.sb.auth.signOut(); LV.user = null; LV.me = null; LV.loaded = false; location.hash = "#dashboard"; liveRoute(); break;
+    case "retry": LV.loaded = false; liveRoute(); break;
+    case "avatar": state.avatar = +v; try { localStorage.setItem("av:" + LV.user.id, v); } catch (e2) {} liveRoute(); break;
+  }
+});
+if (LIVE) startLive(); else { renderFoot(); render(false); }
 })();
 
 </script>
