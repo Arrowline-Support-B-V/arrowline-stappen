@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Arrowline Stappenchallenge januari 2027</title>
-<meta name="description" content="Arrowline Stappenchallenge januari 2027. Loop slim, loop samen, loop voor jullie goede doel.">
+<meta name="description" content="Arrowline Stappenchallenge januari 2027. Loop slim, loop samen, loop voor een goed doel.">
 <meta name="theme-color" content="#FFF4ED">
 <meta name="color-scheme" content="light">
 <meta name="mobile-web-app-capable" content="yes">
@@ -1481,7 +1481,7 @@ const TIPS = [
 ];
 function noteFor(day) {
   const t = userTeam();
-  if (day === 1) return { label: "Welkom", text: "Dag 1 van 31. Twee teams, twee goede doelen en één rondje door Nederland. Loop slim, loop samen, loop voor jullie goede doel!" };
+  if (day === 1) return { label: "Welkom", text: "Dag 1 van 31. Twee teams, twee goede doelen en één rondje door Nederland. Loop slim, loop samen, loop voor een goed doel!" };
   if (day === CFG.days) return { label: "Laatste dag", text: "Laatste dag. Elke dag telt tot het einde, dus kijk of jouw team vandaag nog de bonus kan pakken. Daarna volgt de eindscore." };
   if (day % 2 === 0) return { label: "Spelregel of tip", text: TIPS[(day / 2 - 1) % TIPS.length] };
   const pl = legInfo(t.avgCum[Math.min(D, day - 1)] * CFG.stepKm).prev, f = pl.facts || [];
@@ -1639,7 +1639,7 @@ function viewJourney() {
 
 function viewRules() {
   const sec = (ic, title, items) => `<article class="rule-card"><div class="rc-h"><span>${ic}</span><h2>${title}</h2></div><ul>${items.map(i => `<li>${i}</li>`).join("")}</ul></article>`;
-  return `<div class="view"><header class="head"><div><p class="kicker">Arrowline Stappenchallenge · januari</p><h1>Spelregels</h1><p class="lede">${N_TEAMS} teams, ${N_TEAMS} goede doelen, 31 dagen knallen. Loop slim, loop samen, loop voor jullie goede doel!</p></div></header>
+  return `<div class="view"><header class="head"><div><p class="kicker">Arrowline Stappenchallenge · januari</p><h1>Spelregels</h1><p class="lede">${N_TEAMS} teams, ${N_TEAMS} goede doelen, 31 dagen knallen. Loop slim, loop samen, loop voor een goed doel!</p></div></header>
   <div class="rules">
   ${sec("1", "Opzet", [`Periode: 1 t/m 31 januari.`, `Er zijn ${N_TEAMS} groepen/teams.`, `Bij veel aanmeldingen komen er meer teams (zo’n 30 deelnemers per team) en groeit de route mee.`, `Elk team loopt voor een eigen goed doel.`, `Iedereen houdt dagelijks zijn of haar stappen bij via telefoon, horloge of app.`])}
   ${sec("2", "Verplicht dagdoel", [`Minimaal ${fmt(CFG.min)} stappen per dag is verplicht.`, `Minder dan ${fmt(CFG.min)} stappen = 0 punten voor die dag.`, `Het doel is dus niet vrijblijvend: elke dag telt mee.`])}
@@ -1869,7 +1869,7 @@ async function lvLoad() {
 }
 async function startLive() {
   document.documentElement.classList.add("live");
-  $("#foot").innerHTML = `<p><b>Arrowline Stappenchallenge</b> · januari 2027 · Loop slim, loop samen, loop voor jullie goede doel.</p>`;
+  $("#foot").innerHTML = `<p><b>Arrowline Stappenchallenge</b> · januari 2027 · Loop slim, loop samen, loop voor een goed doel.</p>`;
   const miss = SETUP_MISSING();
   if (miss.length) {                                                       // nooit stilletjes de demo tonen: zeg precies wat er ontbreekt
     $$(".top nav [data-nav], .me, .tabbar").forEach(n => n.hidden = true);

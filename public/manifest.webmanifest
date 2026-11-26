@@ -1,7 +1,7 @@
 {
   "name": "Arrowline Stappenchallenge januari 2027",
   "short_name": "Arrowline Stappen",
-  "description": "Loop slim, loop samen, loop voor jullie goede doel.",
+  "description": "Loop slim, loop samen, loop voor een goed doel.",
   "start_url": "./index.html#dashboard",
   "scope": "./",
   "display": "standalone",
