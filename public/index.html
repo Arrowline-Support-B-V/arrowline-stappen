@@ -16,7 +16,7 @@
 html{-webkit-text-size-adjust:100%}
 body{background:var(--paper);color:var(--ink);font-family:var(--font);line-height:1.5;-webkit-font-smoothing:antialiased;padding-bottom:env(safe-area-inset-bottom)}
 .wrap{max-width:1120px;margin:0 auto;padding:0 24px}
-header{padding:calc(96px + env(safe-area-inset-top)) 0 0}
+header.wrap{padding-top:calc(52px + env(safe-area-inset-top))}
 .logo{height:30px;width:auto;display:block}
 .hero{padding-top:28px;padding-bottom:36px}.hero-card{max-width:760px}.hero-card .fact{background:var(--paper)}
 .kicker{font-size:.8125rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--line)}
@@ -57,8 +57,8 @@ input[type=text]:focus,input[type=email]:focus{outline:none;border-color:var(--a
 .rule b{display:grid;place-items:center;width:34px;height:34px;border-radius:12px;background:var(--tint);color:var(--line);font-size:.9375rem}
 .rule p{font-size:.9375rem}.rule small{display:block;color:var(--fg2)}
 .privacy{font-size:.875rem;color:var(--fg2)}
-footer{padding:0 0 40px;font-size:.8125rem;color:var(--fg2)}
-@media (max-width:900px){header{padding-top:calc(72px + env(safe-area-inset-top))}.hero{padding-top:20px;padding-bottom:28px}.kicker{font-size:.75rem;letter-spacing:.04em}.grid{grid-template-columns:1fr}.card{padding:26px 20px;border-radius:24px}}
+footer{padding:0 0 48px}.foot{background:var(--white);border-radius:28px;padding:26px 32px;box-shadow:0 1px 0 rgba(40,48,45,.04),0 18px 40px -24px rgba(40,48,45,.18)}.foot-slogan{display:flex;flex-wrap:wrap;align-items:center;font-weight:600;letter-spacing:-.02em;font-size:1.0625rem}.foot-slogan span{display:inline-flex;align-items:center}.foot-slogan span:not(:last-child)::after{content:"";width:6px;height:6px;border-radius:50%;background:var(--arrow);margin:0 16px}.foot-meta{margin-top:8px;color:var(--fg2);font-size:.8125rem}
+@media (max-width:900px){header.wrap{padding-top:calc(36px + env(safe-area-inset-top))}.hero{padding-top:20px;padding-bottom:28px}.kicker{font-size:.75rem;letter-spacing:.04em}.grid{grid-template-columns:1fr}.card,.foot{padding:26px 20px;border-radius:24px}}
 @media (max-width:420px){.btn{width:100%}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -96,7 +96,7 @@ footer{padding:0 0 40px;font-size:.8125rem;color:var(--fg2)}
   </div>
 </section>
 </main>
-<footer class="wrap">Arrowline Stappenchallenge · januari 2027 · Loop slim, loop samen, loop voor jullie goede doel.</footer>
+<footer class="wrap"><div class="foot"><p class="foot-slogan"><span>Loop slim</span><span>Loop samen</span><span>Loop voor jullie goede doel</span></p><p class="foot-meta">Arrowline Stappenchallenge · januari 2027</p></div></footer>
 <script>
 (() => {
   const C = window.ARROWLINE_CONFIG || {}, $ = s => document.querySelector(s);
